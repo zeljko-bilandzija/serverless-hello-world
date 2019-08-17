@@ -1,9 +1,21 @@
 service: serverless-hello-world
 
+custom:
+  settings:
+    GREETNAMES_TABLE: greetNames1
+
 provider:
   name: aws
   runtime: nodejs10.x
   region: eu-central-1
+  environment: ${self:custom.settings}
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:GetItem"
+        - "dynamodb:PutItem"
+      Resource:
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.settings.GREETNAMES_TABLE}"
 
 functions:
   hello:
@@ -12,3 +24,24 @@ functions:
       - http:
           path: hello
           method: get
+  wasGreeted:
+    handler: handler.wasGreeted
+    events:
+      - http:
+          path: wasGreeted
+          method: get
+resources:
+  Resources:
+    ImagesTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: "name"
+            AttributeType: "S"
+        KeySchema:
+          - AttributeName: "name"
+            KeyType: "HASH"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.settings.GREETNAMES_TABLE}
